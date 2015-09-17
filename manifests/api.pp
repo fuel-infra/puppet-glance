@@ -125,6 +125,10 @@
 #   (optional) Use syslog for logging.
 #   Defaults to false.
 #
+# [*use_stderr*]
+#   (optional) Use stderr for logging
+#   Defaults to true
+#
 # [*log_facility*]
 #   (optional) Syslog facility to receive log lines.
 #   Defaults to 'LOG_USER'.
@@ -210,6 +214,7 @@ class glance::api(
   $manage_service           = true,
   $enabled                  = true,
   $use_syslog               = false,
+  $use_stderr               = true,
   $log_facility             = 'LOG_USER',
   $show_image_direct_url    = false,
   $purge_config             = false,
@@ -240,7 +245,7 @@ class glance::api(
   }
 
   if ( $glance::params::api_package_name != $glance::params::registry_package_name ) {
-    ensure_packages([$glance::params::api_package_name],
+    ensure_packages('glance-api',
       {
         ensure => $package_ensure,
         tag    => ['openstack', 'glance-package'],
@@ -250,14 +255,9 @@ class glance::api(
 
   Package[$glance::params::api_package_name] -> File['/etc/glance/']
   Package[$glance::params::api_package_name] -> Class['glance::policy']
-  Package[$glance::params::api_package_name] -> Glance_api_config<||>
-  Package[$glance::params::api_package_name] -> Glance_cache_config<||>
 
   # adding all of this stuff b/c it devstack says glance-api uses the
   # db now
-  Glance_api_config<||>   ~> Exec<| title == 'glance-manage db_sync' |>
-  Glance_cache_config<||> ~> Exec<| title == 'glance-manage db_sync' |>
-  Exec<| title == 'glance-manage db_sync' |> ~> Service['glance-api']
   Glance_api_config<||>   ~> Service['glance-api']
   Glance_cache_config<||> ~> Service['glance-api']
   Class['glance::policy'] ~> Service['glance-api']
@@ -293,6 +293,7 @@ class glance::api(
   glance_api_config {
     'DEFAULT/verbose':               value => $verbose;
     'DEFAULT/debug':                 value => $debug;
+    'DEFAULT/use_stderr':            value => $use_stderr;
     'DEFAULT/bind_host':             value => $bind_host;
     'DEFAULT/bind_port':             value => $bind_port;
     'DEFAULT/backlog':               value => $backlog;

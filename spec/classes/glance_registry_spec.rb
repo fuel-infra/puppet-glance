@@ -12,6 +12,7 @@ describe 'glance::registry' do
     {
       :verbose                => false,
       :debug                  => false,
+      :use_stderr             => true,
       :bind_host              => '0.0.0.0',
       :bind_port              => '9191',
       :workers                => facts[:processorcount],
@@ -78,19 +79,6 @@ describe 'glance::registry' do
           'tag'        => 'glance-service',
       )}
 
-      it 'is_expected.to only sync the db if sync_db is enabled' do
-
-        if param_hash[:sync_db]
-          is_expected.to contain_exec('glance-manage db_sync').with(
-            'path'        => '/usr/bin',
-            'command'     => 'glance-manage --config-file=/etc/glance/glance-registry.conf db_sync',
-            'refreshonly' => true,
-            'logoutput'   => 'on_failure',
-            'subscribe'   => ['Package[glance-registry]', 'File[/etc/glance/glance-registry.conf]'],
-            'notify'      => ["Service[glance-registry]"]
-          )
-        end
-      end
       it 'is_expected.to not sync the db if sync_db is set to false' do
 
         if !param_hash[:sync_db]
@@ -289,6 +277,12 @@ describe 'glance::registry' do
     it { is_expected.to contain_glance_registry_config('DEFAULT/ca_file').with_ensure('absent')}
     it { is_expected.to contain_glance_registry_config('DEFAULT/cert_file').with_ensure('absent')}
     it { is_expected.to contain_glance_registry_config('DEFAULT/key_file').with_ensure('absent')}
+  end
+
+  describe 'with use_stderr enabled (default)' do
+    let(:params) { default_params }
+
+    it { is_expected.to contain_glance_registry_config('DEFAULT/use_stderr').with_value('true')}
   end
 
   describe 'with ssl options' do

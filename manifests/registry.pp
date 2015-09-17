@@ -91,6 +91,10 @@
 #    (optional) Use syslog for logging.
 #    Defaults to false.
 #
+# [*use_stderr*]
+#   (optional) Use stderr for logging
+#   Defaults to true
+#
 #  [*log_facility*]
 #    (optional) Syslog facility to receive log lines.
 #    Defaults to LOG_USER.
@@ -146,6 +150,7 @@ class glance::registry(
   $keystone_user         = 'glance',
   $pipeline              = 'keystone',
   $use_syslog            = false,
+  $use_stderr            = true,
   $log_facility          = 'LOG_USER',
   $manage_service        = true,
   $enabled               = true,
@@ -169,7 +174,7 @@ class glance::registry(
   }
 
   if ( $glance::params::api_package_name != $glance::params::registry_package_name ) {
-    ensure_packages( [$glance::params::registry_package_name],
+    ensure_packages( 'glance-registry',
       {
         ensure => $package_ensure,
         tag    => ['openstack', 'glance-package'],
@@ -178,9 +183,7 @@ class glance::registry(
   }
 
   Package[$glance::params::registry_package_name] -> File['/etc/glance/']
-  Package[$glance::params::registry_package_name] -> Glance_registry_config<||>
 
-  Glance_registry_config<||> ~> Exec<| title == 'glance-manage db_sync' |>
   Glance_registry_config<||> ~> Service['glance-registry']
 
   File {
@@ -210,11 +213,12 @@ class glance::registry(
   }
 
   glance_registry_config {
-    'DEFAULT/verbose':   value => $verbose;
-    'DEFAULT/debug':     value => $debug;
-    'DEFAULT/workers':   value => $workers;
-    'DEFAULT/bind_host': value => $bind_host;
-    'DEFAULT/bind_port': value => $bind_port;
+    'DEFAULT/verbose':    value => $verbose;
+    'DEFAULT/debug':      value => $debug;
+    'DEFAULT/workers':    value => $workers;
+    'DEFAULT/bind_host':  value => $bind_host;
+    'DEFAULT/bind_port':  value => $bind_port;
+    'DEFAULT/use_stderr': value => $use_stderr;
   }
 
   if $identity_uri {
@@ -364,16 +368,7 @@ class glance::registry(
   }
 
   if $sync_db {
-    Exec['glance-manage db_sync'] ~> Service['glance-registry']
-
-    exec { 'glance-manage db_sync':
-      command     => $::glance::params::db_sync_command,
-      path        => '/usr/bin',
-      user        => 'glance',
-      refreshonly => true,
-      logoutput   => on_failure,
-      subscribe   => [Package[$glance::params::registry_package_name], File['/etc/glance/glance-registry.conf']],
-    }
+    include ::glance::db::sync
   }
 
   if $manage_service {
