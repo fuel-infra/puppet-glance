@@ -33,7 +33,7 @@ describe 'glance class' do
                 'gpgcheck' => 'no',
               },
               'openstack-liberty-trunk' => {
-                'baseurl'  => 'http://trunk.rdoproject.org/centos7-liberty/current/',
+                'baseurl'  => 'http://trunk.rdoproject.org/centos7-liberty/current-passed-ci/',
                 'descr'    => 'openstack-liberty-trunk',
                 'gpgcheck' => 'no',
               },
@@ -73,6 +73,7 @@ describe 'glance class' do
       # Glance resources
       include ::glance
       include ::glance::client
+      include ::glance::backend::file
       class { '::glance::db::mysql':
         # https://bugs.launchpad.net/puppet-glance/+bug/1446375
         collate  => 'utf8_general_ci',
